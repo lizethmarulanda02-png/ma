@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Para Manu 💙</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  background:#04040f;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-family:'Press Start 2P',monospace;
+  padding:16px 8px;
+}
+#header{
+  color:#afa9ec;font-size:8px;letter-spacing:3px;
+  margin-bottom:10px;text-align:center;line-height:2.2;
+}
+#gameWrap{
+  width:100%;max-width:620px;
+  border:2px solid #534ab7;border-radius:14px;
+  overflow:hidden;background:#0a0a2e;
+  box-shadow:0 0 40px rgba(83,74,183,0.35);
+}
+canvas#gc{display:block;width:100%;height:auto;image-rendering:pixelated;touch-action:none;}
+#ui{
+  background:#06061a;padding:7px 12px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-top:1px solid #1a1a4a;flex-wrap:wrap;gap:4px;
+}
+#ui span{font-size:7px;color:#afa9ec;}
+#ui .lives{color:#d4537e;letter-spacing:3px;}
+#msgBox{
+  display:none;background:#0a0a2e;
+  padding:22px 18px;text-align:center;
+  border-top:1px solid #26215c;
+}
+.msg-title{font-size:10px;color:#fff;margin-bottom:12px;}
+.msg-sub{font-size:8px;color:#9f77dd;line-height:2.3;white-space:pre-line;}
+#msgBox button{
+  margin-top:16px;background:#26215c;color:#afa9ec;
+  border:1px solid #534ab7;border-radius:8px;
+  padding:10px 22px;font-size:8px;
+  font-family:'Press Start 2P',monospace;cursor:pointer;
+}
+#msgBox button:hover{background:#3c3489;}
+#controls{
+  background:#06061a;padding:10px 12px 14px;
+  display:flex;gap:8px;justify-content:center;
+  border-top:1px solid #1a1a4a;
+}
+#controls button{
+  background:#12122a;color:#afa9ec;
+  border:1px solid #3c3489;border-radius:10px;
+  padding:13px 22px;font-size:13px;
+  font-family:monospace;cursor:pointer;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  min-width:75px;
+}
+#controls button:active{background:#26215c;}
+#footer{color:#1e1e4a;font-size:7px;letter-spacing:2px;padding:10px 0 4px;text-align:center;line-height:2;}
+</style>
+</head>
+<body>
+<div id="header">— una aventura de 10 meses —<br>para manu 💙</div>
+<div id="gameWrap">
+  <canvas id="gc" width="620" height="300"></canvas>
+  <div id="ui">
+    <span id="levelLabel">cargando...</span>
+    <span class="lives" id="livesLabel">♥ ♥ ♥</span>
+    <span id="scoreLabel">💙 0</span>
+  </div>
+  <div id="msgBox">
+    <div class="msg-title" id="msgTitle"></div>
+    <div class="msg-sub" id="msgSub"></div>
+    <button id="msgBtn">continuar</button>
+  </div>
+  <div id="controls">
+    <button id="btnLeft">◀</button>
+    <button id="btnJump">▲ saltar</button>
+    <button id="btnRight">▶</button>
+  </div>
+</div>
+<div id="footer">flechas del teclado · botones táctiles en móvil<br>recoge los corazones · evita los pinchos · llega a la bandera</div>
+
+<script>
+const canvas=document.getElementById('gc');
+const ctx=canvas.getContext('2d');
+const W=620,H=300;
+
+const LEVELS=[
+  {
+    name:"nivel 1 — la noche en la logia",
+    bg:"#04041c",sc:"175,169,236",gr:"#3d3490",
+    intro:"Era de noche. Medellín sonaba.\nIbas pasando frente a La Logia...\ny la viste salir.\n\nEse fue el inicio de todo.",
+    outro:"Ese encuentro lo cambió todo.\n\n¡Siguiente nivel!",
+    pf:[
+      {x:0,y:255,w:130,h:12},{x:160,y:220,w:75,h:12},
+      {x:265,y:185,w:70,h:12},{x:360,y:150,w:70,h:12},
+      {x:450,y:185,w:65,h:12},{x:545,y:255,w:75,h:12},
+    ],
+    sp:[{x:143,y:263},{x:248,y:228},{x:343,y:158},{x:433,y:193}],
+    hearts:[{x:180,y:195},{x:375,y:125},{x:465,y:160}],
+    goal:{x:575,y:238,label:"La Logia"}
+  },
+  {
+    name:"nivel 2 — museo el castillo",
+    bg:"#120a1a",sc:"237,147,177",gr:"#7a2a4a",
+    intro:"Museo El Castillo, Medellín.\nUn lugar tranquilo, solo para los dos.\nLa miraste a los ojos\ny le pediste ser tu novia.\n\nFue íntimo. Fue perfecto.",
+    outro:"Ese momento quedó\ngrabado para siempre.\n\n¡Siguiente nivel!",
+    pf:[
+      {x:0,y:255,w:110,h:12},{x:140,y:225,w:65,h:12},
+      {x:230,y:190,w:65,h:12},{x:320,y:155,w:60,h:12},
+      {x:405,y:120,w:65,h:12},{x:495,y:155,w:60,h:12},
+      {x:560,y:255,w:60,h:12},
+    ],
+    sp:[{x:124,y:263},{x:214,y:233},{x:304,y:163},{x:389,y:128},{x:479,y:163}],
+    hearts:[{x:150,y:200},{x:335,y:130},{x:420,y:95}],
+    goal:{x:573,y:238,label:"El Castillo"}
+  },
+  {
+    name:"nivel 3 — picnic en riogrande",
+    bg:"#021a0e",sc:"130,220,170",gr:"#0f7a50",
+    intro:"Una represa rodeada de verde.\nUna cobija, comida, sol y los dos solos.\n\nRiogrande fue un día de esos\nque no se olvidan.",
+    outro:"Un día perfectamente tranquilo.\n\n¡Siguiente nivel!",
+    pf:[
+      {x:0,y:255,w:95,h:12},{x:120,y:225,w:60,h:12},
+      {x:205,y:195,w:60,h:12},{x:295,y:160,w:60,h:12},
+      {x:385,y:195,w:60,h:12},{x:475,y:225,w:60,h:12},
+      {x:560,y:255,w:60,h:12},
+    ],
+    sp:[{x:104,y:263},{x:189,y:233},{x:279,y:168},{x:369,y:203},{x:459,y:233}],
+    hearts:[{x:130,y:200},{x:310,y:135},{x:490,y:200}],
+    goal:{x:573,y:238,label:"Riogrande"}
+  },
+  {
+    name:"nivel 4 — los retos juntos",
+    bg:"#0e0800",sc:"255,190,80",gr:"#7a4a10",
+    intro:"No todo fue fácil.\nHubo peleas, diferencias, momentos duros.\nPero siempre encontraron\nel camino de vuelta.\n\nEso no lo tiene cualquiera.",
+    outro:"Cada obstáculo superado\nlos hizo más fuertes.\n\n¡Siguiente nivel!",
+    pf:[
+      {x:0,y:255,w:85,h:12},{x:110,y:220,w:58,h:12},
+      {x:193,y:185,w:58,h:12},{x:278,y:150,w:55,h:12},
+      {x:360,y:115,w:55,h:12},{x:435,y:150,w:55,h:12},
+      {x:510,y:185,w:55,h:12},{x:562,y:255,w:58,h:12},
+    ],
+    sp:[
+      {x:94,y:263},{x:177,y:228},{x:262,y:193},{x:344,y:158},
+      {x:419,y:123},{x:494,y:158},{x:546,y:193}
+    ],
+    hearts:[{x:120,y:195},{x:293,y:125},{x:450,y:125}],
+    goal:{x:573,y:238,label:"Juntos"}
+  },
+  {
+    name:"nivel 5 — carnavales de pasto",
+    bg:"#180800",sc:"255,170,50",gr:"#a05010",
+    intro:"Diciembre en Pasto.\nCarnavales de Negros y Blancos.\nTu tierra, Manu.\nY ella allá contigo por primera vez.\n\nLa ciudad entera celebró con ustedes.",
+    outro:"Pasto se vistió de fiesta.\nUstedes también.\n\n¡Último nivel!",
+    pf:[
+      {x:0,y:255,w:80,h:12},{x:103,y:225,w:55,h:12},
+      {x:182,y:195,w:55,h:12},{x:261,y:160,w:55,h:12},
+      {x:340,y:125,w:55,h:12},{x:415,y:160,w:55,h:12},
+      {x:490,y:125,w:55,h:12},{x:558,y:195,w:55,h:12},
+      {x:560,y:255,w:60,h:12},
+    ],
+    sp:[
+      {x:87,y:263},{x:166,y:233},{x:245,y:168},{x:324,y:133},
+      {x:399,y:168},{x:474,y:133},{x:543,y:168}
+    ],
+    hearts:[{x:113,y:200},{x:275,y:135},{x:430,y:135}],
+    goal:{x:570,y:238,label:"Pasto"}
+  },
+  {
+    name:"nivel 6 — mon précieux",
+    bg:"#00081e",sc:"200,200,255",gr:"#2a2a8a",
+    intro:"Francés aprendido despacio, juntos.\nBridgerton. Reina del Flow. 1984 en pausa\npero en pausa juntos.\nTerapia de pareja.\nNuevo trabajo, mejor ánimo.\nTititi.\nMon précieux.\nMon petit ciel.\n\nDiez meses de absolutamente todo eso.",
+    outro:"",
+    pf:[
+      {x:0,y:255,w:75,h:12},{x:98,y:220,w:52,h:12},
+      {x:173,y:185,w:52,h:12},{x:248,y:150,w:52,h:12},
+      {x:323,y:115,w:52,h:12},{x:393,y:150,w:52,h:12},
+      {x:463,y:115,w:52,h:12},{x:533,y:150,w:52,h:12},
+      {x:558,y:255,w:62,h:12},
+    ],
+    sp:[
+      {x:82,y:263},{x:157,y:228},{x:232,y:193},{x:307,y:158},
+      {x:377,y:123},{x:447,y:158},{x:517,y:123}
+    ],
+    hearts:[{x:108,y:195},{x:263,y:125},{x:478,y:90}],
+    goal:{x:568,y:238,label:"10 meses ♥"}
+  }
+];
+
+const FINAL={
+  title:"FELICES 10 MESES",
+  sub:`Mon précieux...\n\nCompletaste todos los niveles.\nCada uno fue real.\nCada obstáculo lo superamos juntos.\n\nGracias por elegirme cada día,\npor la terapia, por el francés lento,\npor el tititi, por Pasto en diciembre,\npor El Castillo, por Riogrande,\npor La Logia aquella noche.\n\nEste juego no tiene game over\nmientras sigamos eligiéndonos.\n\n— mon petit ciel —\n💙`
+};
+
+let level=0,lives=3,score=0;
+let keys={left:false,right:false};
+let jumpPressed=false;
+let player,coins,goalReached,showingMsg;
+let particles=[];
+
+function initLevel(){
+  const L=LEVELS[level];
+  player={x:20,y:210,w:16,h:20,vx:0,vy:0,onGround:false,frame:0,ft:0,dir:1,inv:0};
+  coins=L.hearts.map(h=>({...h,collected:false,bob:Math.random()*Math.PI*2}));
+  goalReached=false;showingMsg=false;particles=[];
+  document.getElementById('levelLabel').textContent=L.name;
+  updateUI();hideMsgBox();
+  showMsgBox(
+    L.name.split('—')[1]?.trim().toUpperCase()||L.name,
+    L.intro,'¡a jugar!',()=>{}
+  );
+}
+
+function updateUI(){
+  document.getElementById('livesLabel').textContent=lives>0?'♥ '.repeat(lives).trim():'---';
+  document.getElementById('scoreLabel').textContent='💙 '+score;
+}
+function showMsgBox(title,sub,btn,cb){
+  showingMsg=true;
+  document.getElementById('msgBox').style.display='block';
+  document.getElementById('msgTitle').textContent=title;
+  document.getElementById('msgSub').textContent=sub;
+  const b=document.getElementById('msgBtn');
+  b.textContent=btn;b.onclick=()=>{hideMsgBox();cb();};
+}
+function hideMsgBox(){document.getElementById('msgBox').style.display='none';showingMsg=false;}
+
+function getPlatforms(){return [{x:0,y:H-45,w:W,h:45},...LEVELS[level].pf];}
+
+function spawnParts(x,y){
+  for(let i=0;i<10;i++){
+    const a=Math.random()*Math.PI*2,s=1+Math.random()*3;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,life:1,c:'#d4537e'});
+  }
+}
+
+function update(){
+  if(showingMsg)return;
+  const p=player,spd=3.3,jf=-9,grav=0.46;
+  if(keys.left){p.vx=-spd;p.dir=-1;}
+  else if(keys.right){p.vx=spd;p.dir=1;}
+  else p.vx*=0.7;
+  if(jumpPressed&&p.onGround){p.vy=jf;p.onGround=false;}
+  jumpPressed=false;
+  p.vy+=grav;p.x+=p.vx;p.y+=p.vy;
+  p.onGround=false;
+  for(const pl of getPlatforms()){
+    if(p.x+p.w>pl.x&&p.x<pl.x+pl.w&&p.y+p.h>pl.y&&p.y+p.h<=pl.y+pl.h+14&&p.vy>=0){
+      p.y=pl.y-p.h;p.vy=0;p.onGround=true;
+    }
+  }
+  if(p.x<0)p.x=0;
+  if(p.x+p.w>W)p.x=W-p.w;
+
+  if(p.inv<=0){
+    for(const s of LEVELS[level].sp){
+      if(p.x+p.w>s.x+2&&p.x<s.x+11&&p.y+p.h>s.y+2&&p.y<s.y+12){hitPlayer();return;}
+    }
+  }
+  if(p.inv>0)p.inv--;
+  if(p.y>H+50){hitPlayer();return;}
+
+  p.ft++;if(p.ft>7){p.frame=(p.frame+1)%2;p.ft=0;}
+
+  for(const c of coins){
+    if(!c.collected&&Math.abs(p.x+8-c.x)<18&&Math.abs(p.y+10-c.y)<18){
+      c.collected=true;score++;updateUI();spawnParts(c.x,c.y);
+    }
+  }
+  for(const pt of particles){pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=0.15;pt.life-=0.04;}
+  particles=particles.filter(pt=>pt.life>0);
+
+  const g=LEVELS[level].goal;
+  if(!goalReached&&p.x+p.w>g.x-8&&p.x<g.x+24&&p.y+p.h>g.y-38&&p.y<g.y+10){
+    goalReached=true;
+    if(level<LEVELS.length-1){
+      showMsgBox(
+        LEVELS[level].name.split('—')[1]?.trim().toUpperCase()||'nivel completado',
+        LEVELS[level].outro,'siguiente nivel',()=>{level++;initLevel();}
+      );
+    } else {
+      showMsgBox(FINAL.title,FINAL.sub,'cerrar con amor',()=>{level=0;lives=3;score=0;initLevel();});
+    }
+  }
+}
+
+function hitPlayer(){
+  lives--;updateUI();
+  if(lives<=0){
+    showMsgBox("GAME OVER",
+      "Perdiste todos los corazones.\n¡Pero tú no te rindes fácil, Manu!\nVuelve a intentarlo.",
+      'reiniciar',()=>{lives=3;score=0;level=0;initLevel();});
+  } else {
+    player.x=20;player.y=210;player.vx=0;player.vy=0;player.inv=80;
+  }
+}
+
+function drawChar(x,y,dir,frame,inv){
+  if(inv>0&&Math.floor(inv/6)%2===0)return;
+  ctx.save();ctx.translate(x+8,y+10);
+  if(dir<0)ctx.scale(-1,1);
+  ctx.fillStyle='#f5c4b3';ctx.fillRect(-5,-10,10,8);
+  ctx.fillStyle='#3a2a1a';ctx.fillRect(-3,-8,2,2);ctx.fillRect(1,-8,2,2);
+  ctx.fillStyle='#534ab7';ctx.fillRect(-6,-2,12,8);
+  ctx.fillStyle='#534ab7';ctx.fillRect(-9,-1,3,5);ctx.fillRect(6,-1,3,5);
+  ctx.fillStyle='#f5c4b3';
+  const lo=frame===0?0:2;
+  ctx.fillRect(-5,6,5,6+lo);ctx.fillRect(0,6,5,6-lo);
+  ctx.restore();
+}
+
+function drawSpike(x,y){
+  ctx.fillStyle='#ff3355';
+  ctx.beginPath();ctx.moveTo(x,y+10);ctx.lineTo(x+6,y);ctx.lineTo(x+12,y+10);
+  ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,80,100,0.3)';
+  ctx.beginPath();ctx.arc(x+6,y+10,7,0,Math.PI*2);ctx.fill();
+}
+
+function drawHeart(x,y,collected,bob){
+  if(collected)return;
+  const b=Math.sin(Date.now()/400+bob)*2.5;
+  ctx.save();ctx.translate(x,y+b);
+  ctx.fillStyle='#d4537e';
+  ctx.beginPath();
+  ctx.moveTo(0,-5);ctx.bezierCurveTo(0,-9,-8,-9,-8,-3);
+  ctx.bezierCurveTo(-8,2,0,8,0,9);ctx.bezierCurveTo(0,8,8,2,8,-3);
+  ctx.bezierCurveTo(8,-9,0,-9,0,-5);ctx.fill();
+  ctx.restore();
+}
+
+function drawFlag(x,y,label){
+  ctx.fillStyle='#ed93b1';ctx.fillRect(x,y-30,3,30);
+  ctx.fillStyle='#d4537e';ctx.fillRect(x+3,y-30,20,11);
+  ctx.fillStyle='#fff8';ctx.font='bold 7px monospace';ctx.textAlign='center';
+  ctx.fillText(label,x+13,y+12);ctx.textAlign='left';
+}
+
+let stars=null;
+function getStars(){
+  if(!stars)stars=Array.from({length:40},(_,i)=>({x:(i*89+13)%W,y:(i*53+7)%220,r:i%4===0?1.2:0.6}));
+  return stars;
+}
+
+function draw(){
+  const L=LEVELS[level];
+  ctx.fillStyle=L.bg;ctx.fillRect(0,0,W,H);
+  const t=Date.now();
+  for(const s of getStars()){
+    const a=(Math.sin(t/700+s.x*0.05)*0.3+0.5).toFixed(2);
+    ctx.fillStyle=`rgba(${L.sc},${a})`;ctx.fillRect(s.x,s.y,s.r*2,s.r*2);
+  }
+  ctx.fillStyle=L.gr;ctx.fillRect(0,H-45,W,45);
+  ctx.fillStyle='rgba(255,255,255,0.06)';ctx.fillRect(0,H-45,W,2);
+  for(const pl of LEVELS[level].pf){
+    ctx.fillStyle=L.gr;ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+    ctx.fillStyle='rgba(255,255,255,0.07)';ctx.fillRect(pl.x,pl.y,pl.w,2);
+  }
+  for(const s of LEVELS[level].sp)drawSpike(s.x,s.y);
+  for(const c of coins)drawHeart(c.x,c.y,c.collected,c.bob);
+  ctx.globalAlpha=1;
+  for(const pt of particles){
+    ctx.globalAlpha=pt.life;ctx.fillStyle=pt.c;ctx.fillRect(pt.x-2,pt.y-2,4,4);
+  }
+  ctx.globalAlpha=1;
+  drawFlag(LEVELS[level].goal.x,LEVELS[level].goal.y,LEVELS[level].goal.label);
+  drawChar(player.x,player.y,player.dir,player.frame,player.inv);
+}
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d')keys.right=true;
+  if((e.key===' '||e.key==='ArrowUp'||e.key==='w')&&!e.repeat)jumpPressed=true;
+  if([' ','ArrowUp','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();
+});
+document.addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a')keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d')keys.right=false;
+});
+
+function setupBtn(id,on,off){
+  const b=document.getElementById(id);
+  b.addEventListener('touchstart',e=>{on();e.preventDefault();},{passive:false});
+  b.addEventListener('touchend',e=>{off();e.preventDefault();},{passive:false});
+  b.addEventListener('mousedown',on);b.addEventListener('mouseup',off);b.addEventListener('mouseleave',off);
+}
+setupBtn('btnLeft',()=>keys.left=true,()=>keys.left=false);
+setupBtn('btnRight',()=>keys.right=true,()=>keys.right=false);
+setupBtn('btnJump',()=>jumpPressed=true,()=>{});
+
+initLevel();loop();
+</script>
+</body>
+</html>
